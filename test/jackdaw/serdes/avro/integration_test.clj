@@ -8,7 +8,8 @@
             [jackdaw.client.log :as jcl]
             [jackdaw.data :as jd]
             [jackdaw.serdes.avro :as avro]
-            [jackdaw.serdes.avro.schema-registry :as reg])
+            [jackdaw.serdes.avro.schema-registry :as reg]
+            [jackdaw.test-config :refer [test-config]])
   (:import [org.apache.avro Schema$Parser]
            [org.apache.avro.generic GenericData$Record]
            [org.apache.kafka.common.serialization Serde Serdes]))
@@ -22,7 +23,9 @@
    :avro/schema (slurp (io/resource "resources/example_schema.avsc"))})
 
 (def +real-schema-registry+
-  (let [url "http://localhost:8081"]
+  (let [url (format "http://%s:%s"
+                    (get-in (test-config) [:schema-registry :host])
+                    (get-in (test-config) [:schema-registry :port]))]
     {:avro.schema-registry/url    url
      :avro.schema-registry/client (reg/client url 16)}))
 
@@ -60,8 +63,12 @@
   "A Kafka consumer or streams config."
   (let [id (str "dev-" (java.util.UUID/randomUUID))]
     {"replication.factor" "1", "group.id" id, "application.id" id,
-     "bootstrap.servers"  "localhost:9092"
-     "zookeeper.connect"  "localhost:2181"
+     "bootstrap.servers"  (format "%s:%s"
+                                  (get-in (test-config) [:broker :host])
+                                  (get-in (test-config) [:broker :port]))
+     "zookeeper.connect"  (format "%s:%s"
+                                  (get-in (test-config) [:zookeeper :host])
+                                  (get-in (test-config) [:zookeeper :port]))
      "request.timeout.ms" "1000"}))
 
 ;;;; Schemas
